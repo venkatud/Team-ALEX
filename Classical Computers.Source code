@@ -1,0 +1,126 @@
+import os
+import time
+import hashlib
+from urllib.parse import urlparse
+import re
+#from watchdog.observers import Observer  # Import only if needed
+#from watchdog.events import FileSystemEventHandler  # Import only if needed
+#from scapy.all import sniff, IP  # Import only if needed
+from collections import Counter
+import numpy as np
+from qiskit_aer import Aer
+from qiskit.circuit.library import ZZFeatureMap
+#from qiskit.utils import QuantumInstance  # QuantumInstance is deprecated
+from qiskit.providers import Backend
+#from qiskit.algorithms import QSVM # Import only if needed
+#from qiskit_machine_learning.kernels import QuantumKernel # Import only if needed
+from qiskit.primitives import Sampler
+
+# Check if required libraries are installed
+try:
+    from watchdog.observers import Observer
+    from watchdog.events import FileSystemEventHandler
+    from scapy.all import sniff, IP
+except ImportError as e:
+    print(f"Error importing libraries: {e}. Run 'pip install watchdog scapy'.")
+
+# ==============================
+# CONFIGURATIONS
+# ==============================
+MONITORED_DIR = "monitored_files"
+TARGET_EXTENSIONS = [".txt", ".docx", ".xlsx", ".png", ".jpg"]
+file_hashes = {}
+THRESHOLD_PACKETS_PER_SECOND = 50  # Max packets allowed from a single IP per second
+packet_counts = Counter()
+last_reset_time = time.time()
+
+# ==============================
+# UTILITY FUNCTIONS
+# ==============================
+def calculate_file_hash(file_path):
+    """Calculate the hash of a file for integrity checking."""
+    hasher = hashlib.sha256()
+    try:
+        with open(file_path, "rb") as f:
+            while chunk := f.read(8192):
+                hasher.update(chunk)
+    except Exception as e:
+        print(f"Error reading file {file_path}: {e}")
+        return None
+    return hasher.hexdigest()
+
+def ensure_directory_exists():
+    """Ensure that the monitored directory exists."""
+    if not os.path.exists(MONITORED_DIR):
+        os.makedirs(MONITORED_DIR)
+
+def load_initial_hashes():
+    """Scan the monitored directory and store initial file hashes."""
+    for root, _, files in os.walk(MONITORED_DIR):
+        for file in files:
+            file_path = os.path.join(root, file)
+            if os.path.splitext(file_path)[1] in TARGET_EXTENSIONS:
+                file_hashes[file_path] = calculate_file_hash(file_path)
+
+# ==============================
+# QUANTUM ANOMALY DETECTION
+# ==============================
+def quantum_anomaly_detection(data_points):
+    """Simulate a quantum anomaly detection system."""
+    # Example data points: List of lists [[x1, y1], [x2, y2], ...]
+    # Here, anomalies are points far from the cluster (dummy implementation)
+    center = np.mean(data_points, axis=0)
+    distances = np.linalg.norm(data_points - center, axis=1)
+    threshold = np.percentile(distances, 90)  # Top 10% as anomalies
+    anomalies = [point for point, dist in zip(data_points, distances) if dist > threshold]
+
+    if anomalies:
+        print("[Quantum] Anomalies detected:")
+        for anomaly in anomalies:
+            print(f"  - Data point: {anomaly}")
+    else:
+        print("[Quantum] No anomalies detected.")
+
+# ==============================
+# MAIN DRIVER FUNCTION
+# ==============================
+def main():
+    while True:
+        print("\n===== Security Tool =====")
+        print("1. Analyze URL")
+        print("2. Scan File for Malware")
+        print("3. Check SQL Injection")
+        print("4. Detect Web Attacks")
+        print("5. Monitor Directory for Ransomware")
+        print("6. Monitor Network Traffic for DoS")
+        print("7. Exit")
+
+        choice = input("Choose an option: ").strip()
+
+        if choice == "1":
+            url = input("Enter URL: ").strip()
+            analyze_url(url)  # Call the function for URL analysis
+        elif choice == "2":
+            file_path = input("Enter file path: ").strip()
+            scan_file_for_malware(file_path)  # Call the malware scanning function
+        elif choice == "3":
+            payload = input("Enter payload to test: ").strip()
+            detect_sql_injection(payload)  # Check SQL injection
+        elif choice == "4":
+            payload = input("Enter web payload to test: ").strip()
+            detect_web_attack(payload)  # Detect web attacks
+        elif choice == "5":
+            print("Starting ransomware detection...")
+            start_monitoring()  # Start monitoring for ransomware
+        elif choice == "6":
+            print("Starting DoS detection...")
+            start_sniffing()  # Start sniffing network traffic for DoS
+        elif choice == "7":
+            print("Exiting.")
+            break
+        else:
+            print("Invalid choice. Please try again.")
+
+# Ensure proper entry point
+if _name_ == "_main_":
+    main()
