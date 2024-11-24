@@ -1,0 +1,117 @@
+import random
+import time
+import threading
+from scapy.all import sniff
+from qiskit import QuantumCircuit
+# from qiskit import IBMQ  # Remove this import
+from qiskit.providers.ibmq import least_busy
+from qiskit_aer import noise  # Noise model for quantum simulations
+# Import the IBMProvider class instead of IBMQ and AccountProvider
+from qiskit_ibm_provider import IBMProvider # This is how you import IBMQ functionality now
+from qiskit_ibm_runtime import QiskitRuntimeService  # Import QiskitRuntimeService for IBMQ access
+# Import AerSimulator from qiskit_aer
+from qiskit_aer import AerSimulator
+# Import Sampler from qiskit.primitives
+from qiskit.primitives import Sampler
+# Instead of importing 'execute' from 'qiskit.primitives', use the 'run' method of the backend
+# Import Aer from qiskit_aer if you want to use AerSimulator and keep using execute
+from qiskit_aer import Aer 
+
+from sklearn.ensemble import IsolationForest
+import numpy as np
+
+# === Physical Threat Monitoring ===
+def monitor_physical_threats():
+    while True:
+        temperature = random.uniform(0, 100)  # in Celsius
+        vibration = random.uniform(0, 10)  # Arbitrary unit
+        access_status = random.choice(["Authorized", "Unauthorized"])
+
+        if temperature < 15 or temperature > 85:
+            print("Physical Threat Detected: Temperature out of range!")
+        if vibration > 8:
+            print("Physical Threat Detected: Excessive vibration!")
+        if access_status == "Unauthorized":
+            print("Physical Threat Detected: Unauthorized access!")
+
+        time.sleep(5)  # Monitor every 5 seconds
+
+# === Network Threat Monitoring ===
+def detect_network_threats(packet):
+    if packet.haslayer('IP'):
+        suspicious_ip = "192.168.1.1"  # Replace with actual target
+        if packet['IP'].src == suspicious_ip:
+            print(f"Network Threat Detected: Suspicious activity from {suspicious_ip}")
+
+def start_network_monitoring():
+    sniff(filter="ip", prn=detect_network_threats, count=0)  # Capture indefinitely
+
+# === Quantum-Specific Threat Monitoring ===
+def simulate_quantum_errors():
+    # Load IBM Quantum account using IBMProvider
+    # IBMQ.load_account() # Replaced with the following:
+    IBMProvider.save_account(token='462f862f3516d6e54cb96d0e4a271d55d0fcedac6365fde2b624094557d7f4718b139e91f8e616ee4642df344b14b686f3674d5088af1c8245b447a76dadf4e1')
+    provider = IBMProvider() #  Initialize the IBMProvider
+
+    # Get the least busy quantum device
+    # provider = IBMQ.get_provider(hub='ibm-q') # This is not needed anymore since you have the provider
+    backend = least_busy(provider.backends(filters=lambda x: x.configuration().n_qubits >= 5 and not x.configuration().simulator and x.status().operational==True))
+
+    print(f"Using backend: {backend.name()}")
+
+    # Create quantum circuit
+    qc = QuantumCircuit(1)
+    qc.h(0)
+    qc.measure_all()
+
+    # Apply noise model to simulate errors
+    noise_model = noise.NoiseModel()
+    error = noise.depolarizing_error(0.1, 1)  # 10% error rate
+    noise_model.add_all_qubit_quantum_error(error, ['u1', 'u2', 'u3'])
+
+    # Execute the quantum circuit on the real quantum device
+    job = execute(qc, backend, noise_model=noise_model, shots=100)
+    result = job.result()
+    counts = result.get_counts()
+
+    if counts.get('0', 0) < 40:  # Example threshold for error detection
+        print("Quantum Threat Detected: Error rate exceeds threshold!")
+
+# === Anomaly Detection Using Machine Learning ===
+def detect_anomalies():
+    data = np.random.normal(0, 1, (100, 2))  # Normal data
+    anomalies = np.random.uniform(5, 10, (10, 2))  # Anomalous data
+    X = np.vstack([data, anomalies])
+
+    clf = IsolationForest(random_state=42)
+    clf.fit(X)
+
+    predictions = clf.predict(X)
+    anomalies_detected = np.where(predictions == -1)[0]
+
+    for index in anomalies_detected:
+        print(f"Anomaly Detected in data point {index}: {X[index]}")
+
+# === Unified Threat Monitoring ===
+def main():
+    # Load IBM Quantum account using IBMProvider
+    # IBMQ.load_account()  # Replaced with the following:
+    IBMProvider.save_account(token='462f862f3516d6e54cb96d0e4a271d55d0fcedac6365fde2b624094557d7f4718b139e91f8e616ee4642df344b14b686f3674d5088af1c8245b447a76dadf4e1')
+    provider = IBMProvider() # Initialize the IBMProvider
+
+
+    threads = [
+        threading.Thread(target=monitor_physical_threats),
+        threading.Thread(target=start_network_monitoring),
+        threading.Thread(target=simulate_quantum_errors),
+        threading.Thread(target=detect_anomalies)
+    ]
+
+    for thread in threads:
+        thread.start()
+
+    for thread in threads:
+        thread.join()
+
+if _name_ == "_main_":
+    main()
